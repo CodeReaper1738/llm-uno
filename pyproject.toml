@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-uno"                      # your PyPI package name
+version = "0.1.0"                     # bump for each release
+description = "Reinforcement-learning UNO agent"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Yago Romano", email = "yromanoma42@tntech.edu" }
+]
+requires-python = ">=3.7"
+
+dependencies = [
+  "openai==1.57.2",
+  "huggingface-hub==0.33.0",
+  "matplotlib==3.7.3",
+  "numpy==1.24.4",
+  "pandas==2.1.2",
+  "rlcard==1.2.0",
+  "scipy==1.11.3",
+  "torch==2.1.0",
+  "transformers==4.52.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/CodeReaper1738/llm-uno"
+Source   = "https://github.com/CodeReaper1738/llm-uno"
+
+[project.scripts]
+llm-uno = "llm_uno.core:main"
+
+[project.optional-dependencies]
+llama70b = ["deepspeed==0.16.7"]

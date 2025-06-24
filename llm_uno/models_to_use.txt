@@ -1,0 +1,27 @@
+# Llama 8B
+
+meta-llama/Llama-3.1-8B
+
+### Deepseek Distill Llama 8B
+
+deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+
+### Mistral 24B (Instruct)
+
+mistralai/Mistral-Small-24B-Instruct-2501
+
+### Qwen 32B
+
+Qwen/QwQ-32B Bad for UNO Doesn't Respond to the prompt correctly with a letter
+
+### Deepseek Distill Qwen 32B
+
+deepseek-ai/DeepSeek-R1-Distill-Qwen-32B # Same as normal qwen
+
+### Llama 70B (Instruct)
+
+meta-llama/Llama-3.3-70B-Instruct
+
+### DeepSeek Distill Llama 70B
+
+deepseek-ai/DeepSeek-R1-Distill-Llama-70B

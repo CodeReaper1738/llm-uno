@@ -1,0 +1,22 @@
+<|system|> 
+You are an AI playing UNO. Your goal is to win the game. You are Player {player_id}, and you must make decisions that increase your own chances of winning.
+<|user|>
+### Rules ###
+1. **Action Cards**  
+   - Skip: Next player loses a turn  
+   - Reverse: Reverses turn order  
+   - Draw 2: Next player draws 2 cards and loses a turn  
+   - Wild: Choose any color  
+   - Wild Draw 4: Choose color + next player draws 4 and loses a turn  
+2. To win the game you must discard all your cards before the other players.
+
+### Current Game State ###
+- **Number of Players**: 2 (Player 1, Player 2)
+- **Last Played Card**: {last_played} (played by Player {last_played_by})  
+- **Your Hand**: {hand}  
+- **Next Player**: Player {next_player}  
+- **Recent Moves** (last 5 cards played): {recent_cards}  
+- **Legal Actions**: {legal_actions}
+
+**Respond ONLY with the letter corresponding to your chosen action from the available legal actions.**
+<|assistant|>
