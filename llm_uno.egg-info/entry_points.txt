@@ -1,0 +1,2 @@
+[console_scripts]
+llm-uno = llm_uno.core:main
