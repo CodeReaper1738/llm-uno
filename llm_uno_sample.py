@@ -2,12 +2,20 @@ import rlcard
 from rlcard import models
 from rlcard.agents.human_agents.uno_human_agent import HumanAgent, _print_action
 
+import argparse
 from llm_uno.custom_uno_game import CustomUnoGame
 from llm_uno.random_agent import RandomAgent
 
 from llm_uno.local_ClozeAgent import LocalClozeLLMAgent
 from llm_uno.local_CfAgent import LocalCFLLMAgent
+from llm_uno.openrouter import OpenRouter
 
+
+parser = argparse.ArgumentParser(description="Run UNO AI with DeepSeek R1 via OpenRouter.")
+parser.add_argument("--api-key", type=str, help="OpenRouter API Key.")
+args = parser.parse_args()
+
+api_key = args.api_key
 
 # Make environment with 3 players
 env = rlcard.make('uno', config={'game_num_players': 3})
@@ -21,8 +29,10 @@ random_agent = RandomAgent(env.num_actions)
 
 # Only initialize one LLM agent 
 llm_agent = LocalClozeLLMAgent(env.num_actions, model_id="meta-llama/Llama-3.1-8B", template_path="llama_cloze.txt")
-
 # llm_agent = LocalCFLLMAgent(env.num_actions, model_id="meta-llama/Llama-3.1-8B", template_path="llama_cf.txt")
+
+
+# open_router_agent = OpenRouter(env.num_actions, api_key, model_id="deepseek/deepseek-chat:free", template_path="llama8B_cloze.txt")
 
 # Assign agents to players
 env.set_agents([rule_agent, rule_agent, llm_agent])
@@ -53,18 +63,12 @@ while play_again:
 
         # Determine the action for the current player
         if isinstance(env.agents[player_id], (LocalClozeLLMAgent, LocalCFLLMAgent)):
-            result = env.agents[player_id].step(env._extract_state(state), played_card_log, llm_next_player)
-
-            if len(result) == 3:
-                action, defaulted, legal_actions_at_failure = result
-                if defaulted:
-                    print(f"LLaMA Defaulted! Legal actions at failure: {legal_actions_at_failure}")
-            else:
-                action, defaulted = result
+            action, _, _ = env.agents[player_id].step(env._extract_state(state), played_card_log, llm_next_player)
+        elif isinstance(env.agents[player_id], OpenRouter):
+            action, _ = env.agents[player_id].step(env._extract_state(state), played_card_log, llm_next_player)
         else:
             action = env.agents[player_id].step(env._extract_state(state))
 
-        
         if action:
             played_card_log.append((player_id, action))
             played_cards_by_player[player_id].append(action)

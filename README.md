@@ -1,52 +1,117 @@
-# Using RLCard to implement an LLM driven NPC
+# Distributed LLM-UNO Sample Repository
 
-Requirements to install/setup rlcard
+This repository contains sample scripts for running a distributed UNO game with an LLM agent using RLCard and Hugging Face models.
 
-make sure that you have **Python 3.10+** and **pip** installed.
+## Prerequisites
 
+1. **Python** (>=3.8)
+2. **Install from GitHub** (includes all dependencies via `setup.py`):
 
-## Install Required Dependencies
-pip install transformers
-pip install accelerate
+   ```bash
+   pip install git+https://github.com/yagoromano/llm-uno.git
+   ```
+3. **Hugging Face CLI**:
 
-**Authenticate with Hugging Face to access their models**
-huggingface-cli login
+   ```bash
+   pip install huggingface-cli
+   huggingface-cli login
+   ```
+4. **PyTorch** with CUDA support (for GPU inference).
+5. **DeepSpeed** (if using DeepSpeed inference in `llm_dist_sample.py`):
 
-**RLcard setup**
+   ```bash
+   pip install deepspeed
+   ```
 
-Go to the rlcard website and setup rlcard
-## RLCard Documents
-For more documentation, please refer to the [Documents](docs/README.md) for general introductions. API documents are available at our [website](http://www.rlcard.org).
+## Repository Structure
 
-**LLM Interface Setup** 
+```text
+llm_uno/               # Python package with custom game and agents
+  ├── custom_uno_game.py
+  ├── random_agent.py
+  └── llm_dist/         # Distributed LLM agent implementation
+      └── dist_ClozeAgent.py
 
-clone my repository inside of this rlcard path cd /path-to-folder/rlcard/examples/human
+llm_uno_sample.py      # Single-node UNO+LLM example
+llm_dist_sample.py     # Multi-node distributed UNO+LLM example
+README.md              # This file
+ds_config.json         # DeepSpeed config (optional)
+llama70B_cloze.txt     # Prompt template for Llama-70B
+```
 
-## Running the LLM-Driven Uno Agent
- 
+## Configuration
 
-1. Navigate to the LLM Files
+You can choose where to cache Hugging Face models by setting the `HF_HOME` environment variable:
 
-cd /path-to-folder/rlcard/examples/human
+```bash
+export HF_HOME=/path/to/your/hf_cache
+```
 
-2. Adjust the template you want to send into the LLM
+## Running the Single-Node Example
 
-Update the prompt_template.txt file, which is passed into the LLM to guide its behavior.
-We've provided examples of different types of templates in the prompt_examples.txt
+This example runs a single UNO game with one LLM player on a single GPU/node.
 
-2. LLM agent assisting one of two reinforcement learning agents (2rl, 1LLM)
+```bash
+# Ensure HF_HOME is set
+export HF_HOME=/path/to/your/hf_cache
 
-Run:
+# Run the sample with a Hugging Face LLM
+# (Uncomment your chosen model block in llm_uno_sample.py; default models are commented)
+python3 llm_uno_sample.py
 
-python uno_rllogging.py --model <model_name_or_path>
-Replace <model_name_or_path> with the name or path of the model you want to use.
+# Or run with OpenRouter agent (one required argument)
+python3 llm_uno_sample.py --api_key YOUR_OPENROUTER_API_KEY
+```
+- By default the script executes the Hugging Face model block. To switch models, uncomment the appropriate lines in `llm_uno_sample.py`.
+- When using OpenRouter, only the `--api_key` flag is required; model ID and template path use the built-in defaults.
+- You can change the model by modifying the `model_id` in `llm_uno_sample.py`. If you switch to a smaller model, adjust prompt tags/templates in `llama8B_cloze.txt` accordingly.
 
-API, specify the API key:
-python openrouter_logging.py --apikey <your_api_key> 
+## Running the Multi-Node Example (Large Models)
 
-3. LLM agent assisting either human or reinforcement learning agent (1 human, 1rl, 1LLM)
+For large models (e.g., LLaMA-70B) that require multiple GPUs/nodes, use `llm_dist_sample.py` with `torchrun` under SLURM.
 
-Run: 
-python uno_human.py --model <model_name_or_path>
+```bash
+# High-speed interconnect settings (InfiniBand)
+export NCCL_IB_DISABLE=0
+export NCCL_IB_HCA=mlx5
+export NCCL_SOCKET_IFNAME=ib0
 
+# Triton cache (optional)
+export TRITON_CACHE_DIR=/tmp/triton_cache
 
+# Hugging Face cache
+export HF_HOME=/path/to/your/hf_cache
+
+# SLURM rendezvous settings
+export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
+export MASTER_PORT=$(comm -23 <(seq 49152 65535 | sort) \
+  <(ss -Htan | awk '{print $4}' | cut -d':' -f2 | sort -u) | shuf | head -n1)
+
+# Load CUDA with Spack (if needed)
+spack load cuda@11.8.0
+
+# Activate your Python environment
+source rlcard/bin/activate
+
+# Launch distributed run
+srun --nodes=$SLURM_JOB_NUM_NODES \
+     --ntasks-per-node=1 \
+     --gpus-per-task=$SLURM_GPUS_PER_NODE \
+     torchrun \
+       --nnodes=$SLURM_JOB_NUM_NODES \
+       --nproc_per_node=$SLURM_GPUS_PER_NODE \
+       --rdzv_id=$SLURM_JOB_ID \
+       --rdzv_backend=c10d \
+       --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
+     llm_dist_sample.py \
+```
+* You can swap in a different script or model by editing `llm_dist_sample.py`.
+
+## Notes
+
+* Ensure that `ds_config.json` (DeepSpeed config) is present if you specify `--deepspeed_config`.
+* Prompt templates and agent parameters should match your chosen model’s token requirements.
+
+---
+
+Happy gaming and experimentation with distributed LLM agents in UNO!
