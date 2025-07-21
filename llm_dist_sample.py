@@ -95,9 +95,7 @@ dist.barrier()
 
 if is_main_process:
 
-    play_again = True
-
-    while play_again:
+    for game_id in range(1, 2):
         print(">> Start a new game")
 
         # Reset the environment to initialize the game
@@ -160,11 +158,7 @@ if is_main_process:
 
         # Display only the winning player
         print('===============     Result     ===============')
-        print(f"Player {winning_player} wins the game!")
-
-        resp = input("Play again? (y/n): ")
-        if resp.lower() not in ("y", "yes"):
-            play_again = False
+        print(f"Player {winning_player} wins the game! in game {game_id + 1}")
 
         # Signal workers to terminate
     dist.broadcast(torch.tensor([-1], device='cuda'), src=0)

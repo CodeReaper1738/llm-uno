@@ -12,7 +12,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Yago Romano",
-    author_email="yromanoma42@tntech.edu",
+    author_email="yagoromano1738@gmail.com",
     url="https://github.com/yagoromano/llm-uno",
     packages=find_packages(),
     python_requires=">=3.7",
