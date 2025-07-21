@@ -10,7 +10,7 @@ import time
 import copy
 
 class DistClozeLLMAgent:
-    def __init__(self, num_actions, model_id="meta-llama/Llama-3.3-70B-Instruct", template_path="llama70B_cloze.txt"):
+    def __init__(self, num_actions, model_id="meta-llama/Llama-3.3-70B-Instruct", template_path="llama70B_cloze.txt", ds_config_path="ds_config.json"):
         self.use_raw = True
         self.num_actions = num_actions
         self.game_direction = 1
@@ -52,7 +52,6 @@ class DistClozeLLMAgent:
         torch.cuda.empty_cache()
 
         # --- before deepspeed.init_inference() ---
-        ds_config_path = "ds_config.json"
         if not os.path.exists(ds_config_path):
             raise FileNotFoundError(f"{ds_config_path} not found")
 
@@ -129,12 +128,13 @@ class DistClozeLLMAgent:
             # Tokenize only on main, then broadcast
             if self.is_main_process:
                 prompt = self._generate_prompt(state_copy, played_card_log, next_player)
+
+                # print(f"Generated prompt for shift {shift}:\n{prompt}\n")
                 inputs = self.tokenizer(
                     prompt,
                     return_tensors="pt",
-                    padding=True,
                     truncation=True,
-                    max_length=256
+                    padding=True
                 )
                 obj = [inputs]
             else:
@@ -147,30 +147,18 @@ class DistClozeLLMAgent:
             # Memory cleanup
             gc.collect(); torch.cuda.empty_cache()
 
-            if self.is_main_process:
-                # Build prefix_allowed_tokens_fn
-                legal_token_ids = [self.tokenizer.encode(" " + chr(65 + i), add_special_tokens=False)[0]
-                                    for i in range(n)]
-                obj = [legal_token_ids]
-            else:
-                obj = [None]
-            dist.broadcast_object_list(obj, src=0)
-            legal_token_ids = obj[0]
-
             # Generation
             with torch.inference_mode():
                 outputs = self.model.generate(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     max_new_tokens=1,
-                    do_sample=True,
-                    # prefix_allowed_tokens_fn=lambda batch_id, input_ids: legal_token_ids,
-                    temperature=0.4,
+                    do_sample=False,
+                    temperature=0.6,
                     output_scores=True,
                     return_dict_in_generate=True
                 )
             dist.barrier()
-
 
             if self.is_main_process:
                 # Raw sequence debug
@@ -193,30 +181,33 @@ class DistClozeLLMAgent:
 
                 # Legal action letter probabilities
                 legal_letters = [chr(65 + i) for i in range(n)]
-                legal_letter_token_ids = {}
-                for letter in legal_letters:
-                    ids = self.tokenizer.encode(" " + letter, add_special_tokens=False)
-                    legal_letter_token_ids[letter] = ids[0] if ids else None
-
                 legal_letter_probs = {}
                 print("Legal action letter probabilities:")
-                for letter, tid in legal_letter_token_ids.items():
-                    p = probs[0, tid].item() if (tid is not None and tid < probs.shape[-1]) else 0.0
-                    legal_letter_probs[letter] = p
-                    print(f"Letter {letter}: {p}")
+                for letter in legal_letters:
+                    # collect all single-token variants
+                    variant_ids = []
+                    for variant in (f" {letter}", letter):
+                        toks = self.tokenizer.encode(variant, add_special_tokens=False)
+                        if len(toks) == 1:
+                            variant_ids.append(toks[0])
+                    # pick the variant with highest model probability
+                    best_id = max(variant_ids, key=lambda tid: probs[0, tid].item())
+                    prob = probs[0, best_id].item()
+                    legal_letter_probs[letter] = prob
+                    print(f"Letter {letter}: {prob:.4f}")
 
                 # Accumulate shifted-action scores
                 for idx, action in enumerate(shifted):
-                    letter = chr(65 + idx)
-                    cumulative_scores[action] += legal_letter_probs.get(letter, 0.0)
-
-            # Non-main processes skip debug and accumulation
+                    L = chr(65 + idx)
+                    cumulative_scores[action] += legal_letter_probs.get(L, 0.0)
 
         # Select best action across all shifts
         if self.is_main_process:
             best = max(cumulative_scores, key=cumulative_scores.get)
-            print(f"Cumulative scores: {cumulative_scores}")
-            print(f"Selected action: {best}")
+            print("\n=== Final Cumulative Scores ===")
+            for action, score in cumulative_scores.items():
+                print(f"  {action:12}: {score:.4f}")
+            print(f"\nSelected action: {best}")
         else:
             best = None
         action_obj = [best]
@@ -276,30 +267,34 @@ class DistClozeLLMAgent:
                 template = f.read()
         else:
             template = """
-            <|system|> 
-            You are an AI playing UNO. Your goal is to win the game. You are Player {player_id}, and you must make decisions that increase your own chances of winning.
+            <s>[INST] <<SYS>>
+You are an AI playing UNO. Your goal is to help Player {help_player} win the game. You are Player {player_id}, and you must make decisions that increase Player {help_player}’s chances of winning.
+<</SYS>>
 
-            ### Rules ###
-            1. **Action Cards**  
-            - Skip: Next player loses a turn  
-            - Reverse: Reverses turn order  
-            - Draw 2: Next player draws 2 cards and loses a turn  
-            - Wild: Choose any color  
-            - Wild Draw 4: Choose color + next player draws 4 and loses a turn  
-            2. To win the game you must discard all your cards before the other players.
+### Rules ###
+1. **Action Cards**  
+   - Skip: Next player loses a turn  
+   - Reverse: Reverses turn order  
+   - Draw 2: Next player draws 2 cards and loses a turn  
+   - Wild: Choose any color  
+   - Wild Draw 4: Choose color + next player draws 4 and loses a turn  
+2. To win the game you must discard all your cards before the other players.
 
-            ### Current Game State ###
-            - **Number of Players**: 2 (Player 0, Player 1)
-            - **Last Played Card**: {last_played} (played by Player {last_played_by})  
-            - **Your Hand**: {hand}  
-            - **Next Player**: Player {next_player}  
-            - **Recent Moves** (last 5 cards played): {recent_cards}  
-            - **Legal Actions**: {legal_actions}
+### Current Game State ###
+- **Number of Players**: 3 (Player 0, Player 1, Player 2)  
+- **Last Played Card**: {last_played} (played by Player {last_played_by})  
+- **Your Hand**: {hand}  
+- **Next Player**: Player {next_player}  
+- **Recent Moves** (last 5 cards played):  
+  {recent_cards}  
+- **Legal Actions**:  
+  {legal_actions}
 
-            **Respond ONLY with the letter corresponding to your chosen action from the available legal actions.**
+**Respond ONLY with the letter corresponding to your chosen action from the available legal actions.**
 
-            Your Choice is:
-            <|assistant|>"""
+Your answer: 
+[/INST]</s>
+"""
 
         prompt = template.format(
             help_player=1,  # Player to help

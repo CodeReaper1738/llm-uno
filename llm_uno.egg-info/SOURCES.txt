@@ -1,6 +1,6 @@
 LICENSE
 README.md
-pyproject.toml
+setup.py
 llm_uno/custom_uno_game.py
 llm_uno/local_CfAgent.py
 llm_uno/local_ClozeAgent.py
@@ -14,5 +14,3 @@ llm_uno.egg-info/requires.txt
 llm_uno.egg-info/top_level.txt
 llm_uno/llm_dist/dist_CfAgent.py
 llm_uno/llm_dist/dist_ClozeAgent.py
-llm_uno/llm_dist/test.py
-llm_uno/llm_dist/test_new.py

@@ -51,7 +51,7 @@ class LocalClozeLLMAgent:
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=1,
-                do_sample=True,
+                do_sample=False,
                 temperature=0.4,
                 output_scores=True,
                 return_dict_in_generate=True
@@ -159,29 +159,30 @@ class LocalClozeLLMAgent:
             with open(self.template_path, "r") as f:
                 template = f.read()
         else:
-            template = """You are an AI playing UNO. Your goal is to help Player {help_player} win the game. You are Player {player_id}, and you must make decisions that increase Player {help_player}’s chances of winning.
+            template = """ You are an AI playing UNO. Your goal is to help Player {help_player} win the game. You are Player {player_id}, and you must make decisions that increase Player {help_player}’s chances of winning.
 
-                ### Rules ###
-                1. **Action Cards**
-                - Skip: Next player loses a turn  
-                - Reverse: Reverses turn order  
-                - Draw 2: Next player draws 2 cards and loses a turn  
-                - Wild: Choose any color  
-                - Wild Draw 4: Choose color + next player draws 4 and loses a turn  
-                2. To win the game you must discard all your cards before the other players
+### Rules ###
+1. **Action Cards**
+   - Skip: Next player loses a turn  
+   - Reverse: Reverses turn order  
+   - Draw 2: Next player draws 2 cards and loses a turn  
+   - Wild: Choose any color  
+   - Wild Draw 4: Choose color + next player draws 4 and loses a turn  
+2. To win the game you must discard all your cards before the other players
 
-                ### Current Game State ###
-                - **Number of Players**: 3 (Player 0, Player 1, Player 2)
-                - **Number of Cards per Player**: {num_cards} 
-                - **Last Played Card**: {last_played} (played by Player {last_played_by})  
-                - **Your Hand**: {hand}  
-                - **Next Player**: Player {next_player}  
-                - **Recent Moves** (last 5 cards played): {recent_cards}  
-                - **Legal Actions**: {legal_actions}
+### Current Game State ###
+- **Number of Players**: 3 (Player 0, Player 1, Player 2)
+- **Number of Cards per Player**: {num_cards} 
+- **Last Played Card**: {last_played} (played by Player {last_played_by})  
+- **Your Hand**: {hand}  
+- **Next Player**: Player {next_player}  
+- **Recent Moves** (last 5 cards played): {recent_cards}  
+- **Legal Actions**: {legal_actions}
 
-                **Respond ONLY with the letter corresponding to your chosen action from the available legal actions.**
+**Respond ONLY with the letter corresponding to your chosen action from the available legal actions.**
 
-                Your Choice is:"""
+Your Choice is:
+"""
 
         prompt = template.format(
             help_player=1,  # Player to help

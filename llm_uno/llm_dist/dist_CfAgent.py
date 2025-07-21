@@ -7,10 +7,9 @@ import deepspeed
 import torch.distributed as dist
 import json
 import time
-import copy
 
 class DistCFLLMAgent:
-    def __init__(self, num_actions, model_id="meta-llama/Llama-3.3-70B-Instruct", template_path="llama70B_cf.txt"):
+    def __init__(self, num_actions, model_id="meta-llama/Llama-3.3-70B-Instruct", template_path="llama70B_cf.txt", ds_config_path="ds_config.json"):
         self.use_raw = True
         self.num_actions = num_actions
         self.game_direction = 1
@@ -52,7 +51,6 @@ class DistCFLLMAgent:
         torch.cuda.empty_cache()
 
         # --- before deepspeed.init_inference() ---
-        ds_config_path = "ds_config.json"
         if not os.path.exists(ds_config_path):
             raise FileNotFoundError(f"{ds_config_path} not found")
 
@@ -123,9 +121,9 @@ class DistCFLLMAgent:
 
         for candidate in legal:
             # build prompt
-            if self.is_main:
+            if self.is_main_process:
                 prompt = self._generate_prompt(state, played_card_log, next_player, candidate)
-                inputs = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=256)
+                inputs = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
                 obj = [inputs]
             else:
                 obj = [None]
@@ -140,8 +138,8 @@ class DistCFLLMAgent:
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     max_new_tokens=1,
-                    do_sample=True,
-                    temperature=0.4,
+                    do_sample=False,
+                    temperature=0.6,
                     output_scores=True,
                     return_dict_in_generate=True
                 )
@@ -169,17 +167,27 @@ class DistCFLLMAgent:
                     token_str = self.tokenizer.decode([token_id]).strip()
                     print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
 
-                # Compute prob for "good" and "bad"
-                good_tokens = self.tokenizer.encode(" good", add_special_tokens=False)
-                bad_tokens  = self.tokenizer.encode(" bad",  add_special_tokens=False)
-                print(f"Token IDs for 'good': {good_tokens}")
-                print(f"Token IDs for 'bad': {bad_tokens}")
-                good_prob = probs[0, good_tokens[0]].item() if good_tokens else 0.0
-                bad_prob = probs[0, bad_tokens[0]].item() if bad_tokens else 0.0
+                good_variant_ids = []
+                for v in (" good", "good"):
+                    toks = self.tokenizer.encode(v, add_special_tokens=False)
+                    if len(toks) == 1:
+                        good_variant_ids.append(toks[0])
+
+                bad_variant_ids = []
+                for v in (" bad", "bad"):
+                    toks = self.tokenizer.encode(v, add_special_tokens=False)
+                    if len(toks) == 1:
+                        bad_variant_ids.append(toks[0])
+
+                # pick the highest-prob variant in each set
+                good_id = max(good_variant_ids, key=lambda tid: probs[0, tid].item())
+                bad_id  = max(bad_variant_ids,  key=lambda tid: probs[0, tid].item())
+                good_prob = probs[0, good_id].item()
+                bad_prob  = probs[0, bad_id].item()
 
                 score = good_prob - bad_prob
                 scores[candidate] = score
-                print(f"Candidate: {candidate}, good prob: {good_prob:.4f}, bad prob: {bad_prob:.4f}, score: {score:.4f}")
+                print(f"Candidate: {candidate}, good:{good_prob:.4f}, bad:{bad_prob:.4f}, score:{score:.4f}")
 
         if self.is_main_process:
             best_candidate = max(scores, key=scores.get)
@@ -242,29 +250,34 @@ class DistCFLLMAgent:
                 template = f.read()
         else:
             template = """
-            <|system|>
-            You are an AI playing UNO. Your goal is to win the game. You are Player {player_id}, and you must make decisions that increase your own chances of winning.
+            <s>[INST] <<SYS>>
+You are an AI playing UNO. Your goal is to help Player {help_player} win the game. You are Player {player_id}, and you must make decisions that increase Player {help_player}’s chances of winning.
+<</SYS>>
 
-            ### Rules ###
-            1. **Action Cards** 
-            - Skip: Next player loses a turn
-            - Reverse: Reverses turn order
-            - Draw 2: Next player draws 2 cards and loses a turn
-            - Wild: Choose any color
-            - Wild Draw 4: Choose color + next player draws 4 and loses a turn
-            2. To win the game you must discard all your cards before the other players
+### Rules ###
+1. **Action Cards** 
+   - Skip: Next player loses a turn
+   - Reverse: Reverses turn order
+   - Draw 2: Next player draws 2 cards and loses a turn
+   - Wild: Choose any color
+   - Wild Draw 4: Choose color + next player draws 4 and loses a turn
+2. To win the game you must discard all your cards before the other players
 
-            ### Current Game State ###
-            - **Number of Players**: 2 (Player 1, Player 2)
-            - **Last Played Card**: {last_played} (played by Player {last_played_by})
-            - **Your Hand**: {hand}
-            - **Next Player**: Player {next_player}
-            - **Recent Moves** (last 5 cards played): {recent_cards}
-            - **Legal Actions**: {legal_actions}
+### Current Game State ###
+- **Number of Players**: 3 (Player 0, Player 1, Player 2)
+- **Last Played Card**: {last_played} (played by Player {last_played_by})
+- **Your Hand**: {hand}
+- **Next Player**: Player {next_player}
+- **Recent Moves** (last 5 cards played): 
+  {recent_cards}
+- **Legal Actions**: 
+  {legal_actions}
 
-            Evaluate answer choice {candidate} as either "good" if it helps you win, otherwise "bad".
-            Respond ONLY with either "good" or "bad".
-            <|assistant|>"""
+Evaluate answer choice {candidate} as either "good" if it helps Player {help_player} win, otherwise "bad". 
+Respond ONLY with either "good" or "bad".
+
+Your answer:
+[/INST]</s>"""
 
         prompt = template.format(
             help_player=1,  # Player to help

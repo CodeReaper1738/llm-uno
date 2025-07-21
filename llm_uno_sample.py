@@ -1,7 +1,12 @@
 import rlcard
 from rlcard import models
 from rlcard.agents.human_agents.uno_human_agent import HumanAgent, _print_action
-from llama8B.llm_agent import LLMUnoAgent
+
+from llm_uno.custom_uno_game import CustomUnoGame
+from llm_uno.random_agent import RandomAgent
+
+from llm_uno.local_ClozeAgent import LocalClozeLLMAgent
+from llm_uno.local_CfAgent import LocalCFLLMAgent
 
 
 # Make environment with 3 players
@@ -11,15 +16,21 @@ env.num_players = 3
 
 # Initialize agents
 human_agent = HumanAgent(env.num_actions)
-cfr_agent = models.load('uno-rule-v1').agents[0]
-llama_agent = LLMUnoAgent(env.num_actions)
+rule_agent = models.load('uno-rule-v1').agents[0]
+random_agent = RandomAgent(env.num_actions)
+
+# Only initialize one LLM agent 
+llm_agent = LocalClozeLLMAgent(env.num_actions, model_id="meta-llama/Llama-3.1-8B", template_path="llama_cloze.txt")
+
+# llm_agent = LocalCFLLMAgent(env.num_actions, model_id="meta-llama/Llama-3.1-8B", template_path="llama_cf.txt")
 
 # Assign agents to players
-env.set_agents([cfr_agent, human_agent, llama_agent])
+env.set_agents([rule_agent, rule_agent, llm_agent])
 
 print(">> UNO rule model V1")
+play_again = True
 
-while True:
+while play_again:
     print(">> Start a new game")
 
     # Reset the environment to initialize the game
@@ -38,11 +49,11 @@ while True:
         
         next_player = (player_id + game_direction) % env.num_players
         
-        llama_next_player = 0 if game_direction == 1 else 1
+        llm_next_player = 0 if game_direction == 1 else 1
 
         # Determine the action for the current player
-        if isinstance(env.agents[player_id], LLMUnoAgent):
-            result = env.agents[player_id].step(env._extract_state(state), played_cards_by_player, llama_next_player)
+        if isinstance(env.agents[player_id], (LocalClozeLLMAgent, LocalCFLLMAgent)):
+            result = env.agents[player_id].step(env._extract_state(state), played_card_log, llm_next_player)
 
             if len(result) == 3:
                 action, defaulted, legal_actions_at_failure = result
@@ -83,5 +94,8 @@ while True:
     # Display only the winning player
     print('===============     Result     ===============')
     print(f"Player {winning_player} wins the game!")
-    input("Press any key to continue...")
+
+    resp = input("Play again? (y/n): ")
+    if resp.lower() not in ("y", "yes"):
+        play_again = False
 
