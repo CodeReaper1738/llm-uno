@@ -65,10 +65,9 @@ class LocalClozeLLMAgent:
             # Extract only the newly generated tokens (after the prompt)
             new_tokens = generated_sequences[0][input_length:]
 
-            print("\n=== RAW GENERATED SEQUENCES ===")
-            print(f"\nNew tokens only (IDs): {new_tokens.tolist()}")
-            print(f"New tokens decoded: '{self.tokenizer.decode(new_tokens, skip_special_tokens=True)}'")
-
+            # print("\n=== RAW GENERATED SEQUENCES ===")
+            # print(f"\nNew tokens only (IDs): {new_tokens.tolist()}")
+            # print(f"New tokens decoded: '{self.tokenizer.decode(new_tokens, skip_special_tokens=True)}'")
 
             # Compute probabilities for the first generated token.
             logits = outputs.scores[0]  # shape: [1, vocab_size]
@@ -76,10 +75,10 @@ class LocalClozeLLMAgent:
 
             # Right after computing probs = F.softmax(logits, dim=-1)
             topk = torch.topk(probs, k=5, dim=-1)
-            print("\nTop 5 tokens overall:")
+            # print("\nTop 5 tokens overall:")
             for token_id, prob in zip(topk.indices[0].tolist(), topk.values[0].tolist()):
                 token_str = self.tokenizer.decode([token_id]).strip()
-                print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
+                # print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
 
             # d) Compute legal‐letter probs for this shift
             letters = [chr(65 + i) for i in range(len(shifted_actions))]
@@ -99,7 +98,7 @@ class LocalClozeLLMAgent:
                 L = letters[idx]
                 tid = letter_token_ids[L]
                 p = probs[0, tid].item()
-                print(f"[Shift {shift}] Letter {L}: {p:.4f} → action '{action}'")
+                # print(f"[Shift {shift}] Letter {L}: {p:.4f} → action '{action}'")
                 # e) Accumulate into the action’s total
                 cumulative_scores[action] += p
 
@@ -153,7 +152,7 @@ class LocalClozeLLMAgent:
         action_list_str = "\n  ".join([f"{letter}: {action}" for letter, action in readable_legal_actions.items()])
 
         num_cards_str = "\n  ".join([f"Player {i}: {count}" for i, count in enumerate(state['raw_obs']['num_cards'])])
-        print(f"Num cards: {num_cards_str}")
+        # print(f"Num cards: {num_cards_str}")
 
         if os.path.exists(self.template_path):
             with open(self.template_path, "r") as f:
@@ -196,6 +195,6 @@ Your Choice is:
             num_cards=num_cards_str
         )
         
-        # print(f"Next player: {next_player}")
+        print(f"Next player: {next_player}")
 
         return prompt.strip()

@@ -152,9 +152,9 @@ class DistCFLLMAgent:
                 input_length = inputs.input_ids.shape[1]
                 # Extract only the newly generated tokens
                 new_tokens = generated_sequences[0][input_length:]
-                print("\n=== RAW GENERATED SEQUENCES ===")
-                print(f"\nNew tokens only (IDs): {new_tokens.tolist()}")
-                print(f"New tokens decoded: '{self.tokenizer.decode(new_tokens, skip_special_tokens=True)}'")
+                # print("\n=== RAW GENERATED SEQUENCES ===")
+                # print(f"\nNew tokens only (IDs): {new_tokens.tolist()}")
+                # print(f"New tokens decoded: '{self.tokenizer.decode(new_tokens, skip_special_tokens=True)}'")
 
                 # Get logits and softmax
                 logits = outputs.scores[0]
@@ -162,10 +162,10 @@ class DistCFLLMAgent:
 
                 # Top-5 tokens
                 topk = torch.topk(probs, k=5, dim=-1)
-                print(f"\nTop 5 tokens for candidate {candidate}:")
+                # print(f"\nTop 5 tokens for candidate {candidate}:")
                 for token_id, prob in zip(topk.indices[0].tolist(), topk.values[0].tolist()):
                     token_str = self.tokenizer.decode([token_id]).strip()
-                    print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
+                    # print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
 
                 good_variant_ids = []
                 for v in (" good", "good"):
@@ -187,7 +187,7 @@ class DistCFLLMAgent:
 
                 score = good_prob - bad_prob
                 scores[candidate] = score
-                print(f"Candidate: {candidate}, good:{good_prob:.4f}, bad:{bad_prob:.4f}, score:{score:.4f}")
+                # print(f"Candidate: {candidate}, good:{good_prob:.4f}, bad:{bad_prob:.4f}, score:{score:.4f}")
 
         if self.is_main_process:
             best_candidate = max(scores, key=scores.get)
@@ -292,6 +292,6 @@ Your answer:
             candidate=candidate
         )
 
-        print(f"Next player: {next_player}")
+        # print(f"Next player: {next_player}")
 
         return prompt.strip()

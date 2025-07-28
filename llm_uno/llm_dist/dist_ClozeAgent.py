@@ -165,8 +165,8 @@ class DistClozeLLMAgent:
                 generated_sequences = outputs.sequences
                 input_length = input_ids.shape[1]
                 new_tokens = generated_sequences[0][input_length:]
-                print("\n=== RAW GENERATED SEQUENCES ===")
-                print(f"New tokens decoded: '{self.tokenizer.decode(new_tokens)}'")
+                # print("\n=== RAW GENERATED SEQUENCES ===")
+                # print(f"New tokens decoded: '{self.tokenizer.decode(new_tokens)}'")
 
                 # Compute full vocabulary probabilities
                 logits = outputs.scores[0]
@@ -174,15 +174,15 @@ class DistClozeLLMAgent:
 
                 # Top-5 overall
                 topk = torch.topk(probs, k=5, dim=-1)
-                print("\nTop 5 tokens overall:")
+                # print("\nTop 5 tokens overall:")
                 for token_id, prob in zip(topk.indices[0].tolist(), topk.values[0].tolist()):
                     token_str = self.tokenizer.decode([token_id]).strip()
-                    print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
+                    # print(f"Token ID: {token_id} ('{token_str}'), probability: {prob:.4f}")
 
                 # Legal action letter probabilities
                 legal_letters = [chr(65 + i) for i in range(n)]
                 legal_letter_probs = {}
-                print("Legal action letter probabilities:")
+                # print("Legal action letter probabilities:")
                 for letter in legal_letters:
                     # collect all single-token variants
                     variant_ids = []
@@ -194,7 +194,7 @@ class DistClozeLLMAgent:
                     best_id = max(variant_ids, key=lambda tid: probs[0, tid].item())
                     prob = probs[0, best_id].item()
                     legal_letter_probs[letter] = prob
-                    print(f"Letter {letter}: {prob:.4f}")
+                    # print(f"Letter {letter}: {prob:.4f}")
 
                 # Accumulate shifted-action scores
                 for idx, action in enumerate(shifted):
@@ -260,7 +260,7 @@ class DistClozeLLMAgent:
         action_list_str = "\n  ".join([f"{letter}: {action}" for letter, action in readable_legal_actions.items()])
 
         num_cards_str = "\n  ".join([f"Player {i}: {count}" for i, count in enumerate(state['raw_obs']['num_cards'])])
-        print(f"Num cards: {num_cards_str}")
+        # print(f"Num cards: {num_cards_str}")
 
         if os.path.exists(self.template_path):
             with open(self.template_path, "r") as f:
@@ -308,7 +308,7 @@ Your answer:
             num_cards=num_cards_str
         )
 
-        print(f"Action list: {action_list_str}")
+        # print(f"Action list: {action_list_str}")
 
-        print(f"Next player: {next_player}")
+        # print(f"Next player: {next_player}")
         return prompt.strip()
