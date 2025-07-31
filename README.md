@@ -8,12 +8,13 @@ Make sure that you have **Python 3.8+** and pip installed.
 
 ### Install from GitHub (base package)
 ```bash
-pip install git+https://github.com/yagoromano/llm-uno.git
+pip install "llm-uno @ git+https://github.com/yagoromano/llm-uno.git"
+
 ```
 
 ### (Optional) Install with distributed extra
 ```bash
-pip install git+https://github.com/yagoromano/llm-uno.git#egg=llm-uno[distributed]
+pip install "llm-uno[distributed] @ git+https://github.com/yagoromano/llm-uno.git"
 ```
 
 ### Editable/local development
