@@ -19,6 +19,7 @@ setup(
     install_requires=[
         "openai>=1.57.2",
         "huggingface-hub>=0.33.0",
+        "filelock>=3.0.0",
         "matplotlib>=3.7.3",
         "numpy>=1.24.4",
         "pandas>=2.1.2",
@@ -26,6 +27,7 @@ setup(
         "scipy>=1.11.3",
         "torch>=2.1.0",
         "transformers>=4.52.4",
+        "accelerate>=0.22.0",
     ],
     extras_require={
         "distributed": ["deepspeed>=0.16.7"],

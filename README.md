@@ -46,38 +46,38 @@ huggingface-cli login
 llm_uno/                   # Python package with custom game, agents, and OpenRouter
   ├── custom_uno_game.py
   ├── random_agent.py
-  ├── openrouter/           # OpenRouter agent implementation
-  │   └── OpenRouter.py
+  └── examples/
+      ├── llm_uno_sample.py
+      └── llm_dist_sample.py
   └── llm_dist/             # Distributed LLM agent implementation
       └── dist_ClozeAgent.py
 
 llm_uno_sample.py          # Single-node UNO + Hugging Face LLM example
-openrouter_llmuno_sample.py# Single-node UNO + OpenRouter LLM example
 llm_dist_sample.py         # Multi-node distributed UNO + LLM example
 README.md                  # This file
-ds_config.json             # DeepSpeed config (optional)
+ds_config.json             # DeepSpeed config (required)
 llama70B_cloze.txt         # Prompt template for Llama-70B
 llama8B_cloze.txt          # Prompt template for 8B models
 ```
 
 ## Configuration
 
-Set the Hugging Face cache directory:
-
+Set the Hugging Face cache directory and silence Transformers messages:
 ```bash
 export HF_HOME=/path/to/your/hf_cache
+export TRANSFORMERS_VERBOSITY=error
 ```
 
 ## Running the Single-Node Example
 
-After completing the **Editable install** above, you have two ways to run the sample:
+After completing the **install** above, you have two ways to run the sample:
 
 1. **Module invocation** (from any folder):
    ```bash
    python3 -m llm_uno.examples.llm_uno_sample
    ```
 
-2. **Script invocation** (from the `examples/` folder):
+2. **Script invocation (from editable install)** (from the `examples/` folder):
    ```bash
    cd examples
    python3 llm_uno_sample.py
@@ -98,7 +98,7 @@ python3 llm_uno_sample.py --api_key YOUR_OPENROUTER_API_KEY
 ```
 
 - By default the script executes the Hugging Face LLM block. **To switch to a different Hugging Face model or prompting method, uncomment or modify the relevant `model_id` block in `llm_uno_sample.py`. If you switch models, be sure to update the imported prompt template file** (e.g. `llama8B_cloze.txt` or your own template) so your prompt tags align with the new model’s expected format.
-- When using OpenRouter, only the `--api_key` flag is required; if needed, you can override `--model-id` and `--template-path` to customize the OpenRouter model or prompt template.
+- When using OpenRouter, only the `--api_key` flag is required.
 
 ## Running the Multi-Node Example (Large Models)
 
@@ -127,23 +127,27 @@ spack load cuda@11.8.0
 # Activate your Python environment
 source rlcard/bin/activate
 
-# Launch distributed run
-srun --nodes=$SLURM_JOB_NUM_NODES \
-     --ntasks-per-node=1 \
-     --gpus-per-task=$SLURM_GPUS_PER_NODE \
-     torchrun \
-       --nnodes=$SLURM_JOB_NUM_NODES \
-       --nproc_per_node=$SLURM_GPUS_PER_NODE \
-       --rdzv_id=$SLURM_JOB_ID \
-       --rdzv_backend=c10d \
-       --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT \
-     llm_dist_sample.py \
+# single SLURM/torchrun line, placeholder (METHOD)
+srun --nodes=$SLURM_JOB_NUM_NODES --ntasks-per-node=1 --gpus-per-task=$SLURM_GPUS_PER_NODE torchrun --nnodes=$SLURM_JOB_NUM_NODES --nproc_per_node=$SLURM_GPUS_PER_NODE --rdzv_id=$SLURM_JOB_ID --rdzv_backend=c10d --rdzv_endpoint=$MASTER_ADDR:$MASTER_PORT (Method)
+
+
+## Replace (METHOD) with one of the following depending on how you installed and where you run from:
+
+# Script invocation (from the llm_uno/examples folder after an editable install):
+
+llm_dist_sample.py
+
+## Module invocation (from any folder, no local clone needed):
+
+-m llm_uno.examples.llm_dist_sample
+
 ```
+
 * You can swap in a different script or model by editing `llm_dist_sample.py`.
 
 ## Notes
 
-* Ensure that `ds_config.json` (DeepSpeed config) is present if you specify `--deepspeed_config`.
+* Ensure that `ds_config.json` (DeepSpeed config) is present.
 * Prompt templates and agent parameters should match your chosen model’s token requirements.
 
 
