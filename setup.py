@@ -17,22 +17,22 @@ setup(
     packages=find_packages(),
     python_requires=">=3.7",
     install_requires=[
-        "openai==1.57.2",
-        "huggingface-hub==0.33.0",
-        "matplotlib==3.7.3",
-        "numpy==1.24.4",
-        "pandas==2.1.2",
-        "rlcard==1.2.0",
-        "scipy==1.11.3",
-        "torch==2.1.0",
-        "transformers==4.52.4",
+        "openai>=1.57.2",
+        "huggingface-hub>=0.33.0",
+        "matplotlib>=3.7.3",
+        "numpy>=1.24.4",
+        "pandas>=2.1.2",
+        "rlcard>=1.2.0",
+        "scipy>=1.11.3",
+        "torch>=2.1.0",
+        "transformers>=4.52.4",
     ],
     extras_require={
-        "llama70b": ["deepspeed==0.16.7"],
+        "distributed": ["deepspeed>=0.16.7"],
     },
     entry_points={
         "console_scripts": [
-            "llm-uno=llm_uno.core:main",
+            "llm-uno=llm_uno.core:main"
         ],
     },
     license="MIT",

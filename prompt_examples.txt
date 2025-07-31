@@ -1,0 +1,71 @@
+You are an AI playing UNO. Your goal is to help Player {help_player} win the game. You are Player {player_id}, and you must make decisions that increase Player {help_player}’s chances of winning.
+
+### Rules ###
+1. **Action Cards**
+   - Skip: Next player loses a turn  
+   - Reverse: Reverses turn order  
+   - Draw 2: Next player draws 2 cards and loses a turn  
+   - Wild: Choose any color  
+   - Wild Draw 4: Choose color + next player draws 4 and loses a turn  
+2. The player who discards all of their cards before the other players wins
+
+### Current Game State ###
+- **Number of Players**: 3 (Player 0, Player 1, Player 2)
+- **Number of Cards per Player**: {num_cards} 
+- **Last Played Card**: {last_played} (played by Player {last_played_by})  
+- **Your Hand**: {hand}  
+- **Next Player**: Player {next_player}  
+- **Recent Moves** (last 5 cards played): {recent_cards}  
+- **Legal Actions**: {legal_actions}
+
+
+--cloze or cf goes here --
+
+Your answer: 
+
+
+******************* Clozed Prompt ********************** 
+
+**Respond ONLY with the letter corresponding to your chosen action from the available legal actions.**
+
+***************** CounterFactual Prompt ********************* 
+
+Evaluate answer choice {candidate} as either "good" if it helps Player {help_player} win, otherwise "bad". 
+Respond ONLY with either "good" or "bad".
+
+
+-------------------------------- Mistral Instruct  -----------------------------------------
+
+<s>[SYSTEM_PROMPT]
+You are an AI ....
+[/SYSTEM_PROMPT]
+[INST]
+##Rules ...
+
+
+--cloze or cf goes here --
+[/INST]
+<assistant response>
+</s>
+
+-------------------------------- LLama 70B Instruct --------------------------------------
+
+<s>[INST] <<SYS>>
+You are an AI ...
+<</SYS>>
+###Rules ...
+
+--cloze or cf goes here --
+
+Your answer: 
+[/INST]</s>
+
+------------- Self Win ------------------
+******************* Clozed ********************** 
+
+You are an AI playing UNO. Your goal is to win the game. You are Player {player_id}, and you must make decisions that increase your own chances of winning.
+
+***************** CounterFactual ********************* 
+
+Evaluate answer choice {candidate} as either "good" if it helps you win, otherwise "bad".
+Respond ONLY with either "good" or "bad".

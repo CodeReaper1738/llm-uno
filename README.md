@@ -1,47 +1,67 @@
 # Distributed LLM-UNO Sample Repository
 
-This repository contains sample scripts for running a distributed UNO game with an LLM agent using RLCard and Hugging Face models.
+This repository contains sample scripts for running a distributed UNO game with an LLM agent using RLCard, Hugging Face models, and optionally OpenRouter.
 
-## Prerequisites
+## Installation
 
-1. **Python** (>=3.8)
-2. **Install from GitHub** (includes all dependencies via `setup.py`):
+Make sure that you have **Python 3.8+** and pip installed.
 
-   ```bash
-   pip install git+https://github.com/yagoromano/llm-uno.git
-   ```
-3. **Hugging Face CLI**:
+### Install from GitHub (base package)
+```bash
+pip install git+https://github.com/yagoromano/llm-uno.git
+```
 
-   ```bash
-   pip install huggingface-cli
-   huggingface-cli login
-   ```
-4. **PyTorch** with CUDA support (for GPU inference).
-5. **DeepSpeed** (if using DeepSpeed inference in `llm_dist_sample.py`):
+### (Optional) Install with distributed extra
+```bash
+pip install git+https://github.com/yagoromano/llm-uno.git#egg=llm-uno[distributed]
+```
 
-   ```bash
-   pip install deepspeed
-   ```
+### Editable/local development
+Clone the repo (or re-clone a fresh copy) and, from the **llm-uno** folder (where `setup.py` lives), run:
+```bash
+# Clone and enter project
+git clone https://github.com/yagoromano/llm-uno.git
+
+
+cd llm-uno
+# Base editable install (for development and single-node examples)
+pip install -e .
+# Optional: add distributed support (DeepSpeed) for multi-node example
+pip install -e .[distributed]
+```
+
+### 4. Hugging Face CLI
+```bash
+pip install huggingface-cli
+huggingface-cli login
+```
+
+### 5. PyTorch (with CUDA support)
+
 
 ## Repository Structure
 
 ```text
-llm_uno/               # Python package with custom game and agents
+llm_uno/                   # Python package with custom game, agents, and OpenRouter
   ├── custom_uno_game.py
   ├── random_agent.py
-  └── llm_dist/         # Distributed LLM agent implementation
+  ├── openrouter/           # OpenRouter agent implementation
+  │   └── OpenRouter.py
+  └── llm_dist/             # Distributed LLM agent implementation
       └── dist_ClozeAgent.py
 
-llm_uno_sample.py      # Single-node UNO+LLM example
-llm_dist_sample.py     # Multi-node distributed UNO+LLM example
-README.md              # This file
-ds_config.json         # DeepSpeed config (optional)
-llama70B_cloze.txt     # Prompt template for Llama-70B
+llm_uno_sample.py          # Single-node UNO + Hugging Face LLM example
+openrouter_llmuno_sample.py# Single-node UNO + OpenRouter LLM example
+llm_dist_sample.py         # Multi-node distributed UNO + LLM example
+README.md                  # This file
+ds_config.json             # DeepSpeed config (optional)
+llama70B_cloze.txt         # Prompt template for Llama-70B
+llama8B_cloze.txt          # Prompt template for 8B models
 ```
 
 ## Configuration
 
-You can choose where to cache Hugging Face models by setting the `HF_HOME` environment variable:
+Set the Hugging Face cache directory:
 
 ```bash
 export HF_HOME=/path/to/your/hf_cache
@@ -49,7 +69,20 @@ export HF_HOME=/path/to/your/hf_cache
 
 ## Running the Single-Node Example
 
-This example runs a single UNO game with one LLM player on a single GPU/node.
+After completing the **Editable install** above, you have two ways to run the sample:
+
+1. **Module invocation** (from any folder):
+   ```bash
+   python3 -m llm_uno.examples.llm_uno_sample
+   ```
+
+2. **Script invocation** (from the `examples/` folder):
+   ```bash
+   cd examples
+   python3 llm_uno_sample.py
+   ```
+
+This example runs a single UNO game with one LLM player on a single GPU/node. You can use either a Hugging Face model or the OpenRouter agent:
 
 ```bash
 # Ensure HF_HOME is set
@@ -62,9 +95,9 @@ python3 llm_uno_sample.py
 # Or run with OpenRouter agent (one required argument)
 python3 llm_uno_sample.py --api_key YOUR_OPENROUTER_API_KEY
 ```
-- By default the script executes the Hugging Face model block. To switch models, uncomment the appropriate lines in `llm_uno_sample.py`.
-- When using OpenRouter, only the `--api_key` flag is required; model ID and template path use the built-in defaults.
-- You can change the model by modifying the `model_id` in `llm_uno_sample.py`. If you switch to a smaller model, adjust prompt tags/templates in `llama8B_cloze.txt` accordingly.
+
+- By default the script executes the Hugging Face LLM block. **To switch to a different Hugging Face model or prompting method, uncomment or modify the relevant `model_id` block in `llm_uno_sample.py`. If you switch models, be sure to update the imported prompt template file** (e.g. `llama8B_cloze.txt` or your own template) so your prompt tags align with the new model’s expected format.
+- When using OpenRouter, only the `--api_key` flag is required; if needed, you can override `--model-id` and `--template-path` to customize the OpenRouter model or prompt template.
 
 ## Running the Multi-Node Example (Large Models)
 
@@ -112,6 +145,6 @@ srun --nodes=$SLURM_JOB_NUM_NODES \
 * Ensure that `ds_config.json` (DeepSpeed config) is present if you specify `--deepspeed_config`.
 * Prompt templates and agent parameters should match your chosen model’s token requirements.
 
----
 
-Happy gaming and experimentation with distributed LLM agents in UNO!
+## Cite this work
+If you find this repo useful, you may cite:
